@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Novel - Interactive Prototype</title>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            overflow: hidden;
+        }
+
+        .game-scene {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            height: 100vh;
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 40px;
+        }
+
+        /* ПЕРСОНАЖ */
+        .character-box {
+            position: absolute;
+            left: 10%;
+            bottom: -50px;
+            height: 90vh;
+            z-index: 1;
+            transition: all 0.5s ease;
+        }
+
+        .character-img {
+            height: 100%;
+            display: block;
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
+        }
+
+        /* ИНТЕРФЕЙС */
+        .ui-box {
+            margin-left: auto;
+            margin-right: 5%;
+            width: 450px;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+
+        .choice-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid #555;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            background: #d84b7a;
+            border-color: #ff85a2;
+            transform: translateX(5px);
+        }
+
+        .dialog-box {
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 25px;
+            color: #fff;
+            position: relative;
+            min-height: 80px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+        }
+
+        .dialog-box:active {
+            background: rgba(25, 25, 25, 0.95);
+        }
+
+        .name-tag {
+            background: #d84b7a;
+            padding: 4px 20px;
+            border-radius: 20px;
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .text {
+            font-size: 17px;
+            line-height: 1.5;
+            min-height: 50px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Подсказка */
+        .click-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 10px;
+            color: #666;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <audio id="bg-music" autoplay loop>
+    <source src="A3_05051 (1).WAV" type="audio/wav">
+</audio>
+
+
+
+    <div class="game-scene">
+
+        <!-- ПЕРСОНАЖ -->
+        <div class="character-box" id="char-container">
+            <img
+                id="char-img"
+                class="character-img"
+                src="https://media.discordapp.net/attachments/1556303286297034773/1556408368552476712/Bea_a11_1_warai6.webp?backend=b2&ex=6ac40dbf&is=6ac2bc3f&hm=ce87c5ce067c54947262aff21d78192c869f845d530a5f02640049b096482a98&=&format=webp"
+                alt="Beatrice"
+            >
+        </div>
+
+        <!-- ИНТЕРФЕЙС -->
+        <div class="ui-box">
+
+            <div class="choice-list" id="choices">
+
+                <button class="btn" onclick="makeChoice('beach')">
+                    То что?
+                </button>
+
+                <button class="btn" onclick="makeChoice('home')">
+                    Люди погибнут. Шарю за фразу
+                </button>
+
+            </div>
+
+            <div class="dialog-box" id="db-click" onclick="nextDialog()">
+
+                <div class="name-tag" id="name-field">
+                    Aries
+                </div>
+
+                <div class="text" id="dialog-text">
+                    Знал? Когда чайки заплачут..
+                </div>
+
+                <div id="hint" class="click-hint hidden">
+                    КЛИКНИ, ЧТОБЫ ЧИТАТЬ ДАЛЬШЕ
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <script>
+
+        // Текущее состояние диалога
+        let currentSequence = [];
+        let currentIndex = 0;
+        let isTyping = false;
+        let sceneFinished = false;
+
+        // Данные диалогов
+        const dialogData = {
+
+            beach: [
+
+                {
+                    text: "То люди пог.. ой блять, будет СОБЫТИЕ и довольно КРУПНООЕ",
+                    img: "https://media.discordapp.net/attachments/1397224698567462913/1476168712456507424/Bea_a31_akuwarai5.webp?ex=69a024be&is=699ed33e&hm=3ac1697a5500b23f34237e3efdc6e70df511df2f81163ec5018fe8618e29e879&=&format=webp&width=1115&height=1050"
+                },
+
+                {
+                    text: "Настолько крупное, что даже чайки охрипнут от крика. Понимаешь, о чем я?",
+                    img: "https://media.discordapp.net/attachments/1397224698567464451/1476184967565414451/Bea_a31_akuwarai2.webp?ex=69a033e2&is=699ee262&hm=05590e14ffb22f95f6902d4991d53eae26e867b61cede944115839211841eaaa&=&format=webp&width=1115&height=1050"
+                },
+
+                {
+                    text: "Когда-нибудь в Kessoku Band начнется Immortal Draft и только яркие личности будут вознаграждены.",
+                    img: "https://media.discordapp.net/attachments/1397224698567464451/1476184967565414451/Bea_a31_akuwarai2.webp?ex=69a033e2&is=699ee262&hm=05590e14ffb22f95f6902d4991d53eae26e867b61cede944115839211841eaaa&=&format=webp&width=1115&height=1050"
+                },
+
+                {
+                    text: "Ха, а пока что придумай логин",
+                    img: "https://media.discordapp.net/attachments/1397224698567462913/1476224663322361958/Bea_a11_gaman4.webp?ex=69a058da&is=699f075a&hm=ddff08f36bd7515255875f27cb416eb2a653625aac23ef166c151d0dc35348aa&=&format=webp&width=1090&height=1050"
+                }
+
+            ],
+
+            home: [
+
+                {
+                    text: "Не совсем.",
+                    img: "https://media.discordapp.net/attachments/1397224698567462913/1476162378508009525/Bea_a11_akuwarai2.webp?ex=69a01ed8&is=699ecd58&hm=f14bc646215aa1bcb84840055dece7736e1a32dfb84774ccc3f3a7ac9bf0ba4e&=&format=webp&width=1090&height=1050"
+                },
+
+                {
+                    text: "Хотя наш купольщик на миду — возможно.",
+                    img: "https://media.discordapp.net/attachments/1397224698567462913/1476196561326313553/Bea_a11_fukigen3.webp?ex=69a03eae&is=699eed2e&hm=958c54a76a1761512ab6bff1daaf5846dcc20115145a85b3048e3d00aed99de9&=&format=webp&width=1090&height=1050"
+                }
+
+            ]
+
+        };
+
+
+        // Выбор варианта ответа
+        function makeChoice(choiceKey) {
+
+            const choices = document.getElementById('choices');
+            const hint = document.getElementById('hint');
+
+            choices.classList.add('hidden');
+            hint.classList.remove('hidden');
+
+            currentSequence = dialogData[choiceKey];
+            currentIndex = 0;
+            sceneFinished = false;
+
+            showStep();
+        }
+
+
+        // Показать следующую реплику
+        function showStep() {
+
+            // Если диалог закончился
+            if (currentIndex >= currentSequence.length) {
+
+                document.getElementById('dialog-text').innerHTML =
+                    "<b>[КОНЕЦ СЦЕНЫ]</b>";
+
+                document.getElementById('hint').classList.add('hidden');
+
+                sceneFinished = true;
+                isTyping = false;
+
+                return;
+            }
+
+
+            const step = currentSequence[currentIndex];
+
+            const textElement =
+                document.getElementById('dialog-text');
+
+            const characterImage =
+                document.getElementById('char-img');
+
+
+            // Меняем изображение персонажа
+            characterImage.src = step.img;
+
+
+            // Включаем печать текста
+            isTyping = true;
+
+            textElement.innerText = "";
+
+            let i = 0;
+
+            const speed = 30;
+
+
+            function typeWriter() {
+
+                if (i < step.text.length) {
+
+                    textElement.innerHTML +=
+                        step.text.charAt(i);
+
+                    i++;
+
+                    setTimeout(typeWriter, speed);
+
+                } else {
+
+                    isTyping = false;
+
+                }
+
+            }
+
+
+            typeWriter();
+        }
+
+
+        // Клик по диалоговому окну
+        function nextDialog() {
+
+            // Нельзя перейти дальше, пока текст печатается
+            if (isTyping) {
+                return;
+            }
+
+            // Если сцена уже закончилась
+            if (sceneFinished) {
+                return;
+            }
+
+            // Если выбор ещё не сделан
+            if (currentSequence.length === 0) {
+                return;
+            }
+
+            currentIndex++;
+
+            showStep();
+        }
+
+    </script>
+
+    <!-- МУЗЫКА -->
+    <audio id="bgMusic" loop>
+        <source src="./A3_05051%20(1).WAV" type="audio/wav">
+    </audio>
+
+    <script>
+        const bgMusic = document.getElementById("bgMusic");
+
+        bgMusic.volume = 0.5;
+
+        document.addEventListener("click", function () {
+            bgMusic.play().catch(function(error) {
+                console.log("Музыка не запустилась:", error);
+            });
+        }, { once: true });
+    </script>
+
+</body>
+</html>
